@@ -43,3 +43,80 @@ if (btn && message) {
 };
 
 renderItems(items);
+
+const SUPABASE_URL = "https://siepepsplpiureehxjwt.supabase.co";
+const SUPABASE_KEY = "sb_publishable_hZcGvOqL62xKFp4JJ9pFsg_cbs1chtY";
+
+async function loadItems() {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/items?select=*`, {
+    headers: {
+      apikey: SUPABASE_KEY
+    }
+  });
+  const data = await res.json();
+   renderItems(data);
+}
+
+loadItems();
+
+function renderItems(items) {
+  const list = document.getElementById("item-list");
+  list.innerHTML = "";
+
+  for (const item of items) {
+    const card = document.createElement("div");
+    card.className = "item-card";
+    card.innerHTML = `
+      <h3>${item.title}</h3>
+      <p class="category">${item.category}</p>
+      <p>${item.description ?? ""}</p>
+    `;
+    list.appendChild(card);
+  }
+
+async function addItem(title, category, description) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/items`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_KEY,
+      "Content-Type": "application/json",
+      Prefer: "return=representation"
+    },
+    body: JSON.stringify({ title, category, description })
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.message ?? `エラー（${res.status}）`);
+  }
+
+  const data = await res.json();
+  console.log(res.status, data);
+
+  document.getElementById("add-btn").addEventListener("click", async () => {
+  const msg = document.getElementById("form-message");
+  const btn = document.getElementById("add-btn");
+
+  const title = document.getElementById("input-title").value;
+  const category = document.getElementById("input-category").value;
+  const description = document.getElementById("input-description").value;
+
+  btn.disabled = true;
+  msg.textContent = "追加中...";
+
+  try {
+    await addItem(title, category, description);
+
+    document.getElementById("input-title").value = "";
+    document.getElementById("input-category").value = "";
+    document.getElementById("input-description").value = "";
+
+    await loadItems();
+    msg.textContent = "追加しました！";
+  } catch (e) {
+    msg.textContent = "失敗しました：" + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+}
